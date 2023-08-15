@@ -4,6 +4,9 @@ const getReviewById = async (id) => {
   try {
     // TODO: Get a review by id. Check the API spec file for details on the Review object.
     const result = await pool.query(`SELECT
+    url,
+    variety,
+    stars AS "rating",
     reviews.id,
     reviews.country_id AS country,
     reviews.brand_id AS brand,
@@ -26,11 +29,12 @@ const getAllReviews = async () => {
     variety,
     packaging_styles.packaging_style AS "packagingStyle",
     countries.country AS country,
-    stars AS rating
+    stars AS "rating"
   FROM reviews
   INNER JOIN brands ON brands.id = reviews.brand_id
   INNER JOIN countries ON countries.id = reviews.country_id
-  INNER JOIN packaging_styles ON packaging_styles.id = reviews.packaging_style_id;
+  INNER JOIN packaging_styles ON packaging_styles.id = reviews.packaging_style_id
+  ORDER BY ID;
     `);
     
     return result.rows;
@@ -61,7 +65,7 @@ const getReviewsByBrands = async (brands = []) => {
     const result = await pool.query(`SELECT brands.brand AS brand
     FROM reviews
     INNER JOIN brands ON brands.id = reviews.brand_id
-    WHERE brands.brand = $1;`, [brands]);
+    WHERE brands.brand = ANY ($1);`, [brands]);
 
     return result.rows;
   } catch (error) {
