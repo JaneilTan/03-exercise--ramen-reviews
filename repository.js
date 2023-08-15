@@ -45,7 +45,8 @@ const getReviewsByStyle = async (style) => {
     // TODO: Get reviews by style. Check the API spec file for details on the Review object.
     const result = await pool.query(`SELECT packaging_styles.packaging_style AS "packagingStyle"
     FROM reviews
-    INNER JOIN packaging_styles ON packaging_styles.id = reviews.packaging_style_id;`);
+    INNER JOIN packaging_styles ON packaging_styles.id = reviews.packaging_style_id
+    WHERE packaging_styles.packaging_style = $1;`, [style]);
 
     return result.rows;
   } catch (error) {
@@ -59,7 +60,8 @@ const getReviewsByBrands = async (brands = []) => {
     // Note that `brands` is an array
     const result = await pool.query(`SELECT brands.brand AS brand
     FROM reviews
-    INNER JOIN brands ON brands.id = reviews.brand_id;`);
+    INNER JOIN brands ON brands.id = reviews.brand_id
+    WHERE brands.brand = $1;`, [brands]);
 
     return result.rows;
   } catch (error) {
@@ -72,6 +74,23 @@ const insertReview = async (review) => {
 
   try {
     // TODO: Insert a review. Check the API spec file for details on the Review object.
+    const { rows } = await pool.query(
+    `INSERT INTO reviews (
+      brand_id,
+      variety,
+      packaging_style_id,
+      country_id,
+      stars)
+    VALUES (
+      (SELECT id FROM brands WHERE brand = $1),
+      $2,
+      (SELECT id FROM packaging_styles WHERE packaging_style = $3),
+      (SELECT id FROM countries WHERE country = $4),
+      $5)
+    RETURNING id`,
+    [brand, variety, packagingStyle, country, rating]
+    );
+    return rows[0];
   } catch (error) {
     throw Error(error);
   }
@@ -81,8 +100,11 @@ const updateReviewStars = async (id, rating) => {
   try {
     // TODO: Update a review. Check the API spec file for details on the Review object.
     const updateTodo = await pool.query(
-      "UPDATE reviews SET stars = $1 WHERE id = $2 RETURNING id, stars AS rating",
-      [id, rating]
+      `UPDATE reviews 
+      SET stars = $1 
+      WHERE id = $2 
+      RETURNING id, stars AS "rating"`,
+      [rating, id]
     );
     return updateTodo.rows[0];  
   } catch (error) {
@@ -93,6 +115,12 @@ const updateReviewStars = async (id, rating) => {
 const deleteReviewById = async (id) => {
   try {
     // TODO: Delete a review. Check the API spec file for details on the Review object.
+    const { rowCount } = await pool.query(
+      `DELETE FROM reviews
+      WHERE id = $1`,
+      [id]
+      );
+      return rowCount === 0 ? false : true;
   } catch (error) {
     throw Error(error);
   }
